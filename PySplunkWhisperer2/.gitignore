@@ -4,3 +4,6 @@
 /venv
 /*.spec
 /.vscode
+/bin
+/lib
+pyvenv.cfg
