@@ -93,7 +93,7 @@ parser.add_argument('--username', default="admin")
 parser.add_argument('--password', default="changeme")
 parser.add_argument('--payload', default="calc.exe")
 parser.add_argument('--payload-file', default="pwn.bat")
-parser.add_argument('--no-payload-host', default=False, action=argparse.BooleanOptionalAction)
+parser.add_argument('--no-payload-host', default=False, action='store_true')
 options = parser.parse_args()
 
 print("Running in remote mode (Remote Code Execution)")
